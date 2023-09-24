@@ -29,6 +29,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip().decode('utf-8')
         print ("Got a request of: %s\n" % self.data)
+
+        # Get all the files in the www directory
+        # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
         self.files = [path.join(dirpath,f) for (dirpath, _, filenames) in walk(self.PATH) for f in filenames]
 
         # If the start of data contains GET
@@ -38,37 +41,37 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
             # If the path is a directory, add index.html to the path
             if self.path.endswith('/'):
-                self.mime_type = 'text/html;'
+                self.mime_type = b"text/html;"
                 self.path = self.PATH + self.path + 'index.html'
             # If the path is a file, get the mime type
             elif self.path.endswith('.css'):
-                self.mime_type = 'text/css;'
+                self.mime_type = b"text/css;"
                 self.path = self.PATH + self.path
             elif self.path.endswith('.html'):
-                self.mime_type = 'text/html;'
+                self.mime_type = b"text/html;"
                 self.path = self.PATH + self.path
             else:
                 # Redirect to the path with a slash
-                self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n", 'utf-8'))
-                self.request.sendall(bytearray("Location: %s/\r\n\r\n" % self.path + '/', 'utf-8'))
+                self.request.sendall(b"HTTP/1.1 301 Moved Permanently\r\n")
+                self.request.sendall(b"Location: %s/\r\n" % self.path + '/')
             
                 return
             
             # If the path is not in the www directory, return 404
             if not self.path in self.files:
-                self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n\r\n", 'utf-8'))
+                self.request.sendall(b"HTTP/1.1 404 Not Found\r\n")
                 return
 
             # Open the file and send it to the client
             with open(self.path, 'r') as f:
-                self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n", 'utf-8'))
-                self.request.sendall(bytearray("Content-Type: %s\r\n\r\n" % self.mime_type, 'utf-8'))
-                self.request.sendall(bytearray(f.read(), 'utf-8'))
+                self.request.sendall(b"HTTP/1.1 200 OK\r\n")
+                self.request.sendall(b"Content-Type: %s\r\n" % self.mime_type)
+                self.request.sendall(f.read().encode())
                 f.close()
 
         # If the start of data does not contain GET, return 405
         else:
-            self.request.sendall(bytearray("HTTP/1.1 405 Method Not Allowed\r\n\r\n", 'utf-8'))
+            self.request.sendall(b"HTTP/1.1 405 Method Not Allowed\r\n")
 
         # Close the connection
         self.request.close()
